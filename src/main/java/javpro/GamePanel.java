@@ -1,4 +1,4 @@
-package javpro;
+package javpro; 
 import java.awt.AlphaComposite;
 // import javax.swing.JFrame;
 import java.awt.Color;
