@@ -1,9 +1,11 @@
 package piece;
 
 import javpro.GamePanel;
+import javpro.Type;
 public class Rook extends Piece1 {
     public Rook (int color , int col , int row){
         super(color,col,row);
+        type = Type.ROOK;
         if(color == GamePanel.WHITE){
             image = getImage("/images/rw");
         }

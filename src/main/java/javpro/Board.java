@@ -10,8 +10,8 @@ public class Board {
     public static final int SQUARE_SIZE = 100 ;
     public static final int HALF_SQUARE_SIZE = SQUARE_SIZE/2 ;
     
-    int c = 0 ;
     public void draw(Graphics2D g2){
+        int c = 0 ;
         for(int row = 0 ; row < MAX_ROW ; row++){
             for(int col = 0 ; col < MAX_COL ; col++){
                 if(c == 0){

@@ -1,9 +1,11 @@
 package piece;
 
 import javpro.GamePanel;
+import javpro.Type;
 public class Knight extends Piece1 {
     public Knight (int color , int col , int row){
         super(color,col,row);
+        type = Type.KNIGHT;
         if(color == GamePanel.WHITE){
             image = getImage("/images/nw");
         }
