@@ -38,6 +38,8 @@ public class GamePanel extends JPanel implements Runnable{
     boolean canMove ;
     boolean validSquare;
     boolean promotion ;
+    boolean gameOver;
+    boolean stalemate;
 
     public GamePanel(){
         setPreferredSize(new DimensionUIResource(WIDTH, HEIGHT));
@@ -123,6 +125,10 @@ public class GamePanel extends JPanel implements Runnable{
         }
     }
     private void update(){
+        
+        if(gameOver || stalemate){
+            return; // Stop processing moves if game is over
+        }
 
         if(promotion){
             promoting();
@@ -163,6 +169,12 @@ public class GamePanel extends JPanel implements Runnable{
                         }
                         else{
                             changePlayer();
+                            if(isCheckmate()){
+                                gameOver = true;
+                            }
+                            else if(isStalemate()){
+                                stalemate = true;
+                            }
                         }
                     } else {
                         // the move is not valid so reset everything 
@@ -225,7 +237,11 @@ public class GamePanel extends JPanel implements Runnable{
                 simPieces.remove(activeP.hittingP.getIndex());
             }
             checkCastling();
-            validSquare = true ;
+            
+            // Check if this move would leave our king in check
+            if(!isKingInCheck(simPieces)){
+                validSquare = true ;
+            }
         }
 
         // // Check if piece can move to the new simulated position
@@ -316,6 +332,144 @@ public class GamePanel extends JPanel implements Runnable{
             }
         }
     }
+
+    private boolean isKingInCheck(ArrayList<Piece1> pieceList){
+        Piece1 king = getKing(false);
+        if(king != null){
+            return kingCanBeAttacked(king, pieceList);
+        }
+        return false;
+    }
+
+    private boolean kingCanBeAttacked(Piece1 king, ArrayList<Piece1> pieceList){
+        for(Piece1 piece : pieceList){
+            if(piece.color != king.color && piece.canMove(king.col, king.row)){
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Piece1 getKing(boolean opponent){
+        Piece1 king = null;
+        for(Piece1 piece : simPieces){
+            if(opponent){
+                if(piece.type == Type.KING && piece.color != currentColor){
+                    king = piece;
+                }
+            }
+            else{
+                if(piece.type == Type.KING && piece.color == currentColor){
+                    king = piece;
+                }
+            }
+        }
+        return king;
+    }
+
+    private boolean isCheckmate(){
+        return isKingInCheck(pieces) && !canAnyPieceMove();
+    }
+
+    private boolean isStalemate(){
+        return !isKingInCheck(pieces) && !canAnyPieceMove();
+    }
+
+    private boolean canAnyPieceMove(){
+        for(Piece1 piece : pieces){
+            if(piece.color == currentColor){
+                if(canPieceMove(piece)){
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean canPieceMove(Piece1 piece){
+        for(int row = 0; row < 8; row++){
+            for(int col = 0; col < 8; col++){
+                if(piece.canMove(col, row)){
+                    // Test if this move would leave the king in check
+                    if(isValidMoveTest(piece, col, row)){
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean isValidMoveTest(Piece1 piece, int newCol, int newRow){
+        boolean isValid = false;
+        
+        // Store current state
+        int currentCol = piece.col;
+        int currentRow = piece.row;
+        Piece1 hittingPiece = piece.getHittingP(newCol, newRow);
+        
+        // Simulate the move
+        piece.col = newCol;
+        piece.row = newRow;
+        
+        // Temporarily remove the hit piece if any
+        if(hittingPiece != null){
+            pieces.remove(hittingPiece.getIndex());
+        }
+        
+        // Check if king would be in check after this move
+        if(!isKingInCheck(pieces)){
+            isValid = true;
+        }
+        
+        // Restore the hit piece if any
+        if(hittingPiece != null){
+            pieces.add(hittingPiece);
+        }
+        
+        // Restore original position
+        piece.col = currentCol;
+        piece.row = currentRow;
+        
+        return isValid;
+    }
+
+    private boolean isValidMove(Piece1 piece, int newCol, int newRow){
+        boolean isValidMove = false;
+        
+        // Store current positions
+        int currentCol = piece.col;
+        int currentRow = piece.row;
+        Piece1 hittingPiece = piece.hittingP;
+        
+        // Simulate the move
+        piece.col = newCol;
+        piece.row = newRow;
+        piece.hittingP = piece.getHittingP(newCol, newRow);
+        
+        // Temporarily remove the hit piece if any
+        if(piece.hittingP != null){
+            simPieces.remove(piece.hittingP.getIndex());
+        }
+        
+        // Check if king would be in check after this move
+        if(!isKingInCheck(simPieces)){
+            isValidMove = true;
+        }
+        
+        // Restore the hit piece if any
+        if(piece.hittingP != null){
+            simPieces.add(piece.hittingP);
+        }
+        
+        // Restore original position and hitting piece
+        piece.col = currentCol;
+        piece.row = currentRow;
+        piece.hittingP = hittingPiece;
+        
+        return isValidMove;
+    }
+
     public void paintComponent(Graphics g){
         super.paintComponent(g);
 
@@ -354,11 +508,32 @@ public class GamePanel extends JPanel implements Runnable{
             }
         }
         else{
-            if(currentColor == WHITE) {
-                g2.drawString("White's turn",840,550);
+            if(gameOver){
+                String winner = (currentColor == WHITE) ? "Black" : "White";
+                g2.drawString("Checkmate!", 840, 200);
+                g2.drawString(winner + " Wins!", 840, 250);
             }
-            else {
-                g2.drawString("Black's turn", 840, 250);
+            else if(stalemate){
+                g2.drawString("Stalemate!", 840, 200);
+                g2.drawString("It's a Draw!", 840, 250);
+            }
+            else if(isKingInCheck(pieces)){
+                if(currentColor == WHITE) {
+                    g2.drawString("White in Check",840,200);
+                    g2.drawString("White's turn",840,250);
+                }
+                else {
+                    g2.drawString("Black in Check", 840, 200);
+                    g2.drawString("Black's turn", 840, 250);
+                }
+            }
+            else{
+                if(currentColor == WHITE) {
+                    g2.drawString("White's turn",840,250);
+                }
+                else {
+                    g2.drawString("Black's turn", 840, 250);
+                }
             }
         }
         

@@ -2,7 +2,9 @@
 package piece;
 
 import javpro.GamePanel;
-import javpro.Type;public class Queen extends Piece1 {
+import javpro.Type;
+
+public class Queen extends Piece1 {
     public Queen (int color , int col , int row){
         super(color,col,row);
         type = Type.QUEEN;
